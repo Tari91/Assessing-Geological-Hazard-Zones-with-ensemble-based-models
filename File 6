@@ -1,0 +1,189 @@
+# Install required packages if not already installed
+# !pip install numpy pandas scikit-learn xgboost matplotlib seaborn
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
+from xgboost import XGBClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+
+# ---------------------------
+# Configurations
+# ---------------------------
+CONFIG = {
+    'n_samples': 3000,
+    'random_state': 42,
+    'test_size': 0.3,
+    'scaling': True,
+    'models': {
+        'random_forest': {'n_estimators': 150},
+        'xgboost': {'n_estimators': 100},
+        'gradient_boosting': {'n_estimators': 120}
+    }
+}
+
+# ---------------------------
+# Data Generator Class
+# ---------------------------
+class SyntheticGeoDataGenerator:
+    """Generates synthetic geological data for hazard assessment."""
+
+    def __init__(self, n_samples=2000, random_state=42):
+        self.n_samples = n_samples
+        self.random_state = random_state
+
+    def generate(self) -> pd.DataFrame:
+        np.random.seed(self.random_state)
+        
+        slope = np.random.uniform(0, 60, self.n_samples)
+        lithology = np.random.choice(['sedimentary', 'igneous', 'metamorphic'], self.n_samples)
+        rainfall = np.random.uniform(500, 3000, self.n_samples)
+        fault_distance = np.random.uniform(0, 50, self.n_samples)
+        vegetation = np.random.uniform(0, 1, self.n_samples)
+
+        lithology_map = {'sedimentary': 0, 'igneous': 1, 'metamorphic': 2}
+        lithology_encoded = np.array([lithology_map[l] for l in lithology])
+
+        hazard_score = (
+            0.4 * (slope / 60) +
+            0.3 * (rainfall / 3000) +
+            0.2 * (1 - vegetation) +
+            0.1 * (1 - (fault_distance / 50))
+        )
+
+        hazard_class = pd.cut(
+            hazard_score,
+            bins=[0, 0.4, 0.7, 1],
+            labels=['Low', 'Medium', 'High']
+        )
+
+        data = pd.DataFrame({
+            'slope': slope,
+            'lithology': lithology_encoded,
+            'rainfall': rainfall,
+            'fault_distance': fault_distance,
+            'vegetation': vegetation,
+            'hazard_class': hazard_class
+        })
+
+        return data
+
+# ---------------------------
+# Hazard Model Class
+# ---------------------------
+class HazardZoneModel:
+    """Handles model training, evaluation, and visualization for geological hazard zone prediction."""
+
+    def __init__(self, config: dict):
+        self.config = config
+        self.scaler = StandardScaler()
+        self.models = {}
+        self.ensemble = None
+
+    def prepare_data(self, data: pd.DataFrame):
+        X = data.drop('hazard_class', axis=1)
+        y = data['hazard_class']
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, 
+            test_size=self.config['test_size'], 
+            random_state=self.config['random_state'], 
+            stratify=y
+        )
+
+        if self.config['scaling']:
+            X_train = self.scaler.fit_transform(X_train)
+            X_test = self.scaler.transform(X_test)
+
+        return X_train, X_test, y_train, y_test
+
+    def build_models(self):
+        self.models['rf'] = RandomForestClassifier(
+            n_estimators=self.config['models']['random_forest']['n_estimators'],
+            random_state=self.config['random_state']
+        )
+        self.models['xgb'] = XGBClassifier(
+            n_estimators=self.config['models']['xgboost']['n_estimators'],
+            use_label_encoder=False,
+            eval_metric='mlogloss',
+            random_state=self.config['random_state']
+        )
+        self.models['gb'] = GradientBoostingClassifier(
+            n_estimators=self.config['models']['gradient_boosting']['n_estimators'],
+            random_state=self.config['random_state']
+        )
+
+    def build_ensemble(self):
+        self.ensemble = VotingClassifier(
+            estimators=[('rf', self.models['rf']), 
+                        ('xgb', self.models['xgb']), 
+                        ('gb', self.models['gb'])],
+            voting='soft'
+        )
+
+    def train(self, X_train, y_train):
+        self.ensemble.fit(X_train, y_train)
+
+    def evaluate(self, X_test, y_test):
+        y_pred = self.ensemble.predict(X_test)
+        
+        print("\nClassification Report:\n")
+        print(classification_report(y_test, y_pred))
+
+        cm = confusion_matrix(y_test, y_pred)
+        plt.figure(figsize=(6, 5))
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                    xticklabels=self.ensemble.classes_, 
+                    yticklabels=self.ensemble.classes_)
+        plt.title('Confusion Matrix')
+        plt.xlabel('Predicted')
+        plt.ylabel('Actual')
+        plt.show()
+
+    def feature_importance(self, feature_names):
+        """Show feature importances from the Random Forest model."""
+        self.models['rf'].fit(X_train, y_train)  # Train again if needed
+        importances = self.models['rf'].feature_importances_
+
+        plt.figure(figsize=(8, 5))
+        sns.barplot(x=importances, y=feature_names)
+        plt.title('Feature Importances (Random Forest)')
+        plt.xlabel('Importance Score')
+        plt.ylabel('Features')
+        plt.tight_layout()
+        plt.show()
+
+# ---------------------------
+# Main Execution
+# ---------------------------
+if __name__ == "__main__":
+    # Step 1: Generate synthetic data
+    generator = SyntheticGeoDataGenerator(
+        n_samples=CONFIG['n_samples'], 
+        random_state=CONFIG['random_state']
+    )
+    data = generator.generate()
+
+    # Step 2: Initialize model
+    model = HazardZoneModel(config=CONFIG)
+
+    # Step 3: Prepare data
+    X_train, X_test, y_train, y_test = model.prepare_data(data)
+
+    # Step 4: Build models and ensemble
+    model.build_models()
+    model.build_ensemble()
+
+    # Step 5: Train ensemble
+    model.train(X_train, y_train)
+
+    # Step 6: Evaluate performance
+    model.evaluate(X_test, y_test)
+
+    # Step 7: Feature importance
+    model.feature_importance(feature_names=data.columns.drop('hazard_class'))
