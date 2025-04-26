@@ -9,6 +9,8 @@ Edit
 ├── synthetic_geological_hazard_data.xlsx   # Exported synthetic dataset
 ├── generate_hazard_data.py                 # Python script for data generation
 └── README.md                               # Project documentation
+
+
 🧪 **Features of the Dataset**
 Each generated record includes:
 
