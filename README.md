@@ -3,9 +3,6 @@ This project generates synthetic geological data for hazard zone classification 
 The dataset simulates key environmental and geophysical variables to help prototype models for risk analysis, landslide prediction, and terrain classification.
 
 📦 Project Structure
-bash
-Copy
-Edit
 ├── synthetic_geological_hazard_data.xlsx   # Exported synthetic dataset
 ├── generate_hazard_data.py                 # Python script for data generation
 └── README.md                               # Project documentation
@@ -13,7 +10,6 @@ Edit
 
 🧪 **Features of the Dataset**
 Each generated record includes:
-
 slope: Terrain slope in degrees (0–60)
 
 lithology: Encoded rock type
@@ -27,21 +23,15 @@ vegetation: Normalized vegetation index (0–1)
 
 hazard_class: Risk classification (Low, Medium, High)
 
-⚙️ How to Generate Data
+⚙️ **How to Generate Data**
 📋 Prerequisites
 Install required Python libraries:
-
-bash
-Copy
-Edit
 pip install numpy pandas openpyxl
+
 ▶️ Run the Script
 Generate the dataset by running:
-
-bash
-Copy
-Edit
 python generate_hazard_data.py
+
 This will:
 
 Create synthetic samples (default = 3000 samples)
@@ -67,4 +57,4 @@ slope	lithology	rainfall	fault_distance	vegetation	hazard_class
 
 
 ✍️ Author
-Tarinabo williamtarinabo@gmail.com
+Tarinabo  williamtarinabo@gmail.com
