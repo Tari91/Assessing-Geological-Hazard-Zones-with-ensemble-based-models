@@ -6,9 +6,9 @@ The dataset simulates key environmental and geophysical variables to help protot
 📦 Project Structure
 
 
-├── synthetic_geological_hazard_data.xlsx   # Exported synthetic dataset
-├── generate_hazard_data.py                 # Python script for data generation
-└── README.md                               # Project documentation
+├── synthetic_geological_hazard_data.xlsx     # Exported synthetic dataset
+├── generate_hazard_data.py                   # Python script for data generation
+└── README.md                                 # Project documentation
 
 
 🧪 **Features of the Dataset**
